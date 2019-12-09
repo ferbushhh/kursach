@@ -63,7 +63,6 @@ public class SplayTree<T extends Comparable<T>> implements SortedSet<T> {
     }
 
     public class SecondaryComparator<T extends Comparable<T>> implements Comparator<T> {
-        @Override
         public int compare(T o1, T o2) {
             return o1.compareTo(o2);
         }
