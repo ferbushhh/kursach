@@ -28,29 +28,29 @@ public class SplayTree<T extends Comparable<T>> implements SortedSet<T> {
         return value;
     }
 
-    private SplayNode splay(SplayNode node, T value) {
+    private SplayNode<T> splay(SplayNode<T> node, T value) {
         if (node == null) return null;
 
-        if (value.compareTo((T) node.getValue()) < 0) {
+        if (value.compareTo(node.getValue()) < 0) {
             if (node.getLeft() == null) return node;
 
-            if (value.compareTo((T) node.getLeft().getValue()) < 0) {
+            if (value.compareTo(node.getLeft().getValue()) < 0) {
                 node.getLeft().setLeft(splay(node.getLeft().getLeft(), value));
                 node = rotateRight(node);
-            } else if (value.compareTo((T) node.getLeft().getValue()) > 0) {
+            } else if (value.compareTo(node.getLeft().getValue()) > 0) {
                 node.getLeft().setRight(splay(node.getLeft().getRight(), value));
                 if (node.getLeft().getRight() != null)
                     node.setLeft(rotateLeft(node.getLeft()));
             }
             return node.getLeft() == null ? node : rotateRight(node);
-        } else if (value.compareTo((T) node.getValue()) > 0) {
+        } else if (value.compareTo(node.getValue()) > 0) {
             if (node.getRight() == null) return node;
 
-            if (value.compareTo((T) node.getRight().getValue()) < 0) {
+            if (value.compareTo(node.getRight().getValue()) < 0) {
                 node.getRight().setLeft(splay(node.getRight().getLeft(), value));
                 if (node.getRight().getLeft() != null)
                     node.setRight(rotateRight(node.getRight()));
-            } else if (value.compareTo((T) node.getRight().getValue()) > 0) {
+            } else if (value.compareTo(node.getRight().getValue()) > 0) {
                 node.getRight().setRight(splay(node.getRight().getRight(), value));
                 node = rotateLeft(node);
             }
@@ -62,27 +62,27 @@ public class SplayTree<T extends Comparable<T>> implements SortedSet<T> {
         return new SecondaryComparator<T>();
     }
 
-    public class SecondaryComparator<T extends Comparable<T>> implements Comparator<T> {
+    public static class SecondaryComparator<T extends Comparable<T>> implements Comparator<T> {
         public int compare(T o1, T o2) {
             return o1.compareTo(o2);
         }
     }
 
     public SortedSet<T> subSet(T fromElement, T toElement) { //+
-        if (fromElement.compareTo(toElement) > 0) throw new NoSuchElementException();
-        return new SplaySubSet<>(this, toElement, fromElement, false, false);
+        if (fromElement.compareTo(toElement) > 0) throw new IllegalArgumentException();
+        return new SplaySubSet<>(this, fromElement, toElement);
     }
 
     public SortedSet<T> headSet(T toElement) { //+
-        return new SplaySubSet<>(this, toElement, null, true, false);
+        return new SplaySubSet<>(this, null, toElement);
     }
 
     public SortedSet<T> tailSet(T fromElement) { //+
-        return new SplaySubSet<>(this, null, fromElement, false, true);
+        return new SplaySubSet<>(this, fromElement, null);
     }
 
     public T first() { //+
-        if (root == null) return null;
+        if (this.size() == 0) throw new NoSuchElementException();
         SplayNode<T> cur = root;
         while (cur.getLeft() != null) {
             cur = cur.getLeft();
@@ -91,7 +91,7 @@ public class SplayTree<T extends Comparable<T>> implements SortedSet<T> {
     }
 
     public T last() { //+
-        if (root == null) return null;
+        if (this.size() == 0) throw new NoSuchElementException();
         SplayNode<T> cur = root;
         while (cur.getRight() != null) {
             cur = cur.getRight();
@@ -114,9 +114,7 @@ public class SplayTree<T extends Comparable<T>> implements SortedSet<T> {
 
         root = splay(root, value);
 
-        boolean res = root.getValue().equals(value);
-
-        return res;
+        return root.getValue().equals(value);
     }
 
     public Iterator<T> iterator() { //+
@@ -133,8 +131,23 @@ public class SplayTree<T extends Comparable<T>> implements SortedSet<T> {
         return arr;
     }
 
-    public <T> T[] toArray(T[] a) { //+
-        return (T[]) this.toArray();
+    @SuppressWarnings("unchecked")
+    public <T1> T1[] toArray(T1[] a) {
+        T1[] mas;
+
+        if (a.length >= size())
+            mas = a;
+        else
+            mas = (T1[]) java.lang.reflect.Array.newInstance(a.getClass().getComponentType(), this.size());
+        Iterator<T> iter = iterator();
+        for (int i = 0; i < mas.length; i++) {
+            if (!iter.hasNext()) {
+                mas[i] = null;
+                return mas;
+            }
+            mas[i] = (T1) iter.next();
+        }
+        return mas;
     }
 
     public boolean add(T value) { //+
@@ -167,7 +180,6 @@ public class SplayTree<T extends Comparable<T>> implements SortedSet<T> {
             return true;
         } else return false;
     }
-
 
     public boolean remove(Object o) { //+
         if (root == null) return false;
@@ -227,7 +239,7 @@ public class SplayTree<T extends Comparable<T>> implements SortedSet<T> {
 
     public class SplayTreeIterator<T extends Comparable<T>> implements Iterator<T> { //такое же как и в BinaryTree (в котоеде)
 
-        private SplayTree splayTree;
+        private SplayTree<T> splayTree;
         private Stack<SplayNode<T>> stack;
 
         public SplayTreeIterator(SplayTree splayTree) {
@@ -269,20 +281,14 @@ public class SplayTree<T extends Comparable<T>> implements SortedSet<T> {
 
     public class SplaySubSet<T extends Comparable<T>> implements SortedSet<T> {
 
-        T topBorder;
-        T bottomBorder;
-
-        boolean toLast;
-        boolean fromFirst;
+        T toElement; //topBorder
+        T fromElement; //bottomBorder
 
         SplayTree<T> subTree;
 
-        SplaySubSet(SplayTree tree, T topBorder, T bottomBorder, boolean fromFirst, boolean toLast) {
-            this.topBorder = topBorder;
-            this.bottomBorder = bottomBorder;
-
-            this.fromFirst = fromFirst;
-            this.toLast = toLast;
+        SplaySubSet(SplayTree tree, T fromElement, T toElement) {
+            this.fromElement = fromElement;
+            this.toElement = toElement;
 
             this.subTree = tree;
         }
@@ -290,12 +296,12 @@ public class SplayTree<T extends Comparable<T>> implements SortedSet<T> {
         boolean isInside(Object o) {
             T val = (T) o;
 
-            if (bottomBorder != null && topBorder != null) {
-                return val.compareTo(bottomBorder) >= 0 && val.compareTo(topBorder) < 0;
-            } else if (bottomBorder == null) {
-                return val.compareTo(topBorder) < 0;
+            if (fromElement != null && toElement != null) {
+                return toElement.compareTo(val) >= 0 && fromElement.compareTo(val) < 0;
+            } else if (fromElement == null) {
+                return toElement.compareTo(val) > 0;
             } else
-                return val.compareTo(bottomBorder) >= 0;
+                return fromElement.compareTo(val) <= 0;
         }
 
         @Override
@@ -309,7 +315,7 @@ public class SplayTree<T extends Comparable<T>> implements SortedSet<T> {
 
         @Override
         public boolean remove(Object o) {
-            if (isInside(o)) {
+            if (isInside(o) && this.contains(o)) {
                 subTree.remove(o);
                 return true;
             } else
@@ -325,45 +331,120 @@ public class SplayTree<T extends Comparable<T>> implements SortedSet<T> {
 
         @Override
         public boolean addAll(Collection<? extends T> c) {
-            return subTree.addAll(c);
+            int n = this.size();
+            for (Object o : c)
+                if (!isInside(o)) return false;
+            for (Object o : c)
+                this.add((T) o);
+            return this.size() > n;
         }
 
         @Override
         public boolean retainAll(Collection<?> c) {
-            return subTree.retainAll(c);
+            return this.retainAll(c);
         }
 
         @Override
         public boolean removeAll(Collection<?> c) {
-            return subTree.removeAll(c);
+            int n = this.size();
+            for (Object o : c)
+                if (!isInside(o)) return false;
+            for (Object o : c)
+                this.remove((T) o);
+            return this.size() < n;
         }
 
         @Override
         public void clear() {
-            subTree.clear();
+            this.clear();
         }
 
         @Override
         public boolean contains(Object o) {
-            if (isInside(o)) {
-                return subTree.contains(o);
-            }
+            T val = (T) o;
+            for (T t: this)
+                if (val.compareTo(t) == 0) return true;
             return false;
         }
 
         @Override
         public Iterator<T> iterator() {
-            return subTree.iterator();
+            return new SplayTreeSetIterator();
+        }
+
+        private boolean elementInInterval(T element) {
+            if (fromElement == null && toElement == null) return false;
+            return (fromElement == null || element.compareTo(fromElement) >= 0) && (toElement == null || element.compareTo(toElement) < 0);
+        }
+
+        public class SplayTreeSetIterator implements Iterator<T> {
+
+            private final Iterator<T> treeIt = SplaySubSet.this.subTree.iterator();
+
+            private T next = null;
+
+            SplayTreeSetIterator() {
+                while (treeIt.hasNext()) {
+                    final T next = treeIt.next();
+                    if (elementInInterval(next)) {
+                        this.next = next;
+                        break;
+                    }
+                }
+            }
+
+            @Override
+            // Проверка на наличие следующего элемента
+            public boolean hasNext() {
+                return next != null;
+            }
+
+            @Override
+            // Переход к следующему элементу
+            public T next() {
+                if (next == null) throw new NoSuchElementException();
+                final T result = next;
+                next = treeIt.hasNext() ? treeIt.next() : null;
+                if (!elementInInterval(next)) next = null;
+                return result;
+            }
+
+            @Override
+            // Удаление текущего элемента
+            public void remove() {
+                treeIt.remove();
+            }
         }
 
         @Override
         public Object[] toArray() {
-            return subTree.toArray();
+            Object[] ob = new Object[size()];
+            Iterator<T> iter = this.iterator();
+            for (int i = 0; i < size(); i++) {
+                if (iter.hasNext()) {
+                    ob[i] = iter.next();
+                }
+            }
+            return ob;
         }
 
         @Override
         public <T1> T1[] toArray(T1[] a) {
-            return subTree.toArray(a);
+            T1[] mas;
+            if (a.length >= size)
+                mas = a;
+            else
+                mas = (T1[]) java.lang.reflect.Array.newInstance(a.getClass().getComponentType(), this.size());
+
+            Iterator<T> iter = this.iterator();
+            for (int i = 0; i < mas.length; i++) {
+                if (!iter.hasNext()) {
+                    mas[i] = null;
+                    return mas;
+                }
+                mas[i] = (T1) iter.next();
+            }
+            return mas;
         }
 
         @Override
@@ -388,33 +469,31 @@ public class SplayTree<T extends Comparable<T>> implements SortedSet<T> {
 
         @Override
         public SortedSet<T> subSet(T fromElement, T toElement) {
-            if (fromElement.compareTo(toElement) > 0) throw new NoSuchElementException();
-            return new SplaySubSet<>(subTree, fromElement, toElement, false, false);
+            if (fromElement.compareTo(toElement) > 0) throw new IllegalArgumentException();
+            return new SplaySubSet<>(subTree, fromElement, toElement);
         }
 
         @Override
         public SortedSet<T> headSet(T toElement) {
-            return new SplaySubSet<>(subTree, bottomBorder, toElement, fromFirst, false);
+            return new SplaySubSet<>(subTree, fromElement, toElement);
         }
 
         @Override
         public SortedSet<T> tailSet(T fromElement) {
-            return new SplaySubSet<>(subTree, fromElement, topBorder, false, toLast);
+            return new SplaySubSet<>(subTree, fromElement, toElement);
         }
 
         @Override
         public T first() {
-            if (bottomBorder == null)
+            if (fromElement == null)
                 return subTree.first();
-            else if (toLast)
-                return bottomBorder;
             else {
                 Iterator<T> iter = subTree.iterator();
                 T temp = null;
 
                 while (iter.hasNext()) {
                     temp = iter.next();
-                    if (temp.compareTo(bottomBorder) == 0) {
+                    if (temp.compareTo(fromElement) == 0) {
                         temp = iter.next();
                         break;
                     }
@@ -426,7 +505,7 @@ public class SplayTree<T extends Comparable<T>> implements SortedSet<T> {
 
         @Override
         public T last() {
-            if (topBorder == null)
+            if (toElement == null)
                 return subTree.last();
             else {
                 Iterator<T> iter = subTree.iterator();
@@ -434,7 +513,7 @@ public class SplayTree<T extends Comparable<T>> implements SortedSet<T> {
                 T res = null;
                 while (iter.hasNext()) {
                     temp = iter.next();
-                    if (temp.compareTo(topBorder) == 0)
+                    if (temp.compareTo(toElement) == 0)
                         break;
                     res = temp;
                 }

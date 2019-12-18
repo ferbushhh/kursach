@@ -10,11 +10,11 @@ public class SplayNode<T> {
         this.right = null;
     }
 
-    public void setLeft (SplayNode node) {
+    public void setLeft (SplayNode<T> node) {
         this.left = node;
     }
 
-    public void setRight (SplayNode node) {
+    public void setRight (SplayNode<T> node) {
         this.right = node;
     }
 
@@ -22,11 +22,11 @@ public class SplayNode<T> {
         return value;
     }
 
-    public SplayNode getLeft() {
+    public SplayNode<T> getLeft() {
         return left;
     }
 
-    public SplayNode getRight() {
+    public SplayNode<T> getRight() {
         return right;
     }
 }

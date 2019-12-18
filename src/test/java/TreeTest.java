@@ -1,8 +1,9 @@
 import org.junit.*;
 import java.util.*;
+import java.util.function.IntFunction;
 
 public class TreeTest {
-    SplayTree tree = new SplayTree();
+    SplayTree<Integer> tree = new SplayTree<>();
 
     @Before
     public void addToTree() {
@@ -24,7 +25,7 @@ public class TreeTest {
 
     @Test
     public void add() {
-        SplayTree treeTest = new SplayTree();
+        SplayTree<Integer> treeTest = new SplayTree<>();
 
         Assert.assertEquals(0, treeTest.size()); //длина пустого  = 0
 
@@ -32,7 +33,9 @@ public class TreeTest {
 
         Assert.assertEquals(1, treeTest.size()); //длина с одним элементом = 1
 
-        Assert.assertEquals(5, treeTest.getRoot().getValue()); //проверка, что добавили корень со значением 5
+        Integer i = treeTest.getRoot().getValue();
+
+        Assert.assertEquals((Object) 5, i); //проверка, что добавили корень со значением 5
 
         Assert.assertEquals(9, tree.size()); //длина = 9
 
@@ -43,18 +46,6 @@ public class TreeTest {
         tree.add(11);
 
         Assert.assertEquals(10, tree.size());//длина уже 10
-
-        /*Assert.assertEquals(0, tree.first()); //минимальный элемент  - 0
-
-        Assert.assertEquals(11, tree.last()); //сейчас максимальный элемент  - 11
-
-        List<Integer> list = new LinkedList();
-        list.add(8);
-        list.add(3);
-
-        Assert.assertTrue(treeTest.containsAll(list)); //дерево содержит 8 и 3
-        treeTest.clear();
-        Assert.assertEquals(0, treeTest.size());*/
     }
 
     @Test
@@ -114,7 +105,7 @@ public class TreeTest {
 
     @Test
     public void addAll() {
-        List<Integer> list = new LinkedList();
+        List<Integer> list = new LinkedList<>();
         list.add(17);
         list.add(12);
         list.add(100);
@@ -123,7 +114,7 @@ public class TreeTest {
         Assert.assertTrue(tree.containsAll(list)); //проверили, что весь список есть
         Assert.assertEquals(12, tree.size());
 
-        SplayTree newTree = new SplayTree();
+        SplayTree<Integer> newTree = new SplayTree<>();
 
         Assert.assertTrue(newTree.addAll(list));
         Assert.assertTrue(newTree.containsAll(list));
@@ -132,7 +123,7 @@ public class TreeTest {
 
     @Test
     public void removeAll() {
-        List<Integer> list = new LinkedList();
+        List<Integer> list = new LinkedList<>();
         list.add(5);
         list.add(3);
         list.add(9);
@@ -143,7 +134,7 @@ public class TreeTest {
         Assert.assertFalse(tree.contains(5));
         Assert.assertFalse(tree.contains(3));
 
-        SplayTree newTree = new SplayTree();
+        SplayTree<Integer> newTree = new SplayTree<>();
 
         Assert.assertTrue(newTree.addAll(list));
         Assert.assertTrue(newTree.removeAll(list));
@@ -178,31 +169,36 @@ public class TreeTest {
 
     @Test
     public void first() {
-        SplayTree treeEmpty = new SplayTree();
-        Assert.assertEquals(null, treeEmpty.first());
 
+        try {
+            SplayTree treeEmpty = new SplayTree();
+            treeEmpty.first();
+        } catch (NoSuchElementException ignored) {
+        }
 
-        Assert.assertEquals(0, tree.first());
+        Assert.assertEquals((Object) 0, tree.first());
         tree.add(-1);
-        Assert.assertEquals(-1, tree.first());
+        Assert.assertEquals(-1, (Object) tree.first());
     }
 
     @Test
     public void last() {
-        SplayTree treeEmpty = new SplayTree();
-        Assert.assertEquals(null, treeEmpty.last());
+        try {
+            SplayTree treeEmpty = new SplayTree();
+            treeEmpty.last();
+        } catch (NoSuchElementException ignored) {
+        }
 
-
-        Assert.assertEquals(9, tree.last());
+        Assert.assertEquals((Object) 9, tree.last());
         tree.add(100);
-        Assert.assertEquals(100, tree.last());
+        Assert.assertEquals((Object) 100, tree.last());
     }
 
     @Test
     public void isEmpty() {
         Assert.assertFalse(tree.isEmpty());
 
-        SplayTree treeEmpty = new SplayTree();
+        SplayTree<Integer> treeEmpty = new SplayTree<>();
 
         Assert.assertTrue(treeEmpty.isEmpty());
 
@@ -219,33 +215,104 @@ public class TreeTest {
 
     @Test
     public void toArray() {
-        List list = Arrays.asList(tree.toArray());
-        for (int i = 0; i < list.size(); i++) {
-            Object node = list.get(i);
+        //toArray()
+        Object[] list = tree.toArray();
+        for (Object node : list) {
+            Assert.assertTrue(tree.contains(node));
+        }
+
+        //toArray(бла бла бла)
+        Object[] myArray = new Integer[tree.size()];
+        tree.toArray(myArray);
+
+        for (Object node : myArray) {
             Assert.assertTrue(tree.contains(node));
         }
     }
 
     @Test
     public void subSet() {
+        //правильно ли построили subSet по длине
         Assert.assertEquals(4, tree.subSet(1, 6).size());
 
-        SplayTree emptyTree = new SplayTree();
+        SplayTree<Integer> emptyTree = new SplayTree<>();
         Assert.assertEquals(0, emptyTree.subSet(0, 0).size());
 
-        Set set = tree.subSet(0, 4);
+        //правильно ли построили subSet по наполнению
+        SortedSet<Integer> set = tree.subSet(0, 4);
         Assert.assertTrue(set.contains(0));
         Assert.assertTrue(set.contains(3));
         Assert.assertFalse(set.contains(4));
+
+        //проверяем итератор по тому, сколько раз он прошелся по элементам
+        final int[] i = {0};
+        set.forEach(value -> {
+            Assert.assertTrue(tree.contains(value));
+            i[0]++;
+        });
+        Assert.assertEquals(3, i[0]);
+
+        //еще проверяем итератор
+        Set<Integer> setSecond = tree.subSet(3, 8);
+        i[0] = 0;
+
+        setSecond.forEach(value -> {
+            Assert.assertTrue(tree.contains(value));
+            i[0]++;
+        });
+        Assert.assertEquals(5, i[0]);
+
+        //проверяем toArray()
+        Object[] arr = setSecond.toArray();
+        for (Object node : arr) {
+            Assert.assertTrue(setSecond.contains(node));
+        }
+
+        //проверяем sub, tail, head set
+        SortedSet<Integer> subSet = tree.subSet(1, 9);
+        SortedSet subSetSecond = subSet.subSet(1, 5);
+        Assert.assertEquals(3, subSetSecond.size());
+        Assert.assertEquals(5, subSet.headSet(7).size());
+        Assert.assertEquals(3, subSet.tailSet(6).size());
+
+        //добавили в дерево элемент, размер subSeta поменялся
+        tree.add(2);
+        Assert.assertEquals(4, subSetSecond.size());
+
+        //проверяем addAll, removeAll
+        SplayTree<Integer> newTree = new SplayTree<>();
+        newTree.add(1);
+        newTree.add(8);
+        newTree.add(9);
+
+        Set<Integer> setNewTree = newTree.subSet(1, 8);
+        Assert.assertEquals(1, setNewTree.size());
+
+        //список содержит элементы, находящиеся в границах subSet
+        List<Integer> list = new LinkedList<>();
+        list.add(3);
+        list.add(6);
+        list.add(4);
+        list.add(5);
+
+        Assert.assertTrue(setNewTree.addAll(list)); //смогли добавить список
+        Assert.assertEquals(5, setNewTree.size());
+
+        setNewTree.removeAll(list);
+        Assert.assertEquals(1, setNewTree.size());
+
+        list.add(17);
+        Assert.assertFalse(setNewTree.addAll(list)); //уже не можем добавить, т.к. содержится число, выходящее за пределы
+
         try {
             Set set1 = tree.subSet(4, 0);
-        } catch (NoSuchElementException e) {
+        } catch (IllegalArgumentException ignored) {
         }
     }
 
     @Test
     public void headSet() {
-        SplayTree emptyTree = new SplayTree();
+        SplayTree<Integer> emptyTree = new SplayTree<>();
         Assert.assertEquals(0, emptyTree.headSet(0).size());
 
         Assert.assertEquals(5, tree.headSet(6).size());
@@ -257,7 +324,7 @@ public class TreeTest {
 
     @Test
     public void tailSet() {
-        SplayTree emptyTree = new SplayTree();
+        SplayTree<Integer> emptyTree = new SplayTree<>();
         Assert.assertEquals(0, emptyTree.tailSet(0).size());
 
         Assert.assertEquals(4, tree.tailSet(6).size());
